@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E+N · Agenda de Trabajo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#14213D; --navy-deep:#0B1526; --navy-card:#1B2C4F; --navy-card-hi:#233865;
+    --terra:#B5451B; --terra-bright:#E0642F; --gold:#C9954A; --gold-bright:#E4B36C;
+    --cream:#FDFAF7; --line:rgba(253,250,247,0.10); --line-soft:rgba(253,250,247,0.06);
+    --muted:#9AA5BF; --green:#4C9A6A;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Inter',Arial,sans-serif; background:var(--navy-deep); color:var(--cream); line-height:1.5; padding:32px 24px 80px;}
+  h1,h2{font-family:'Space Grotesk',Arial,sans-serif; font-weight:700; color:var(--cream);}
+  .wrap{max-width:1400px; margin:0 auto;}
+  .head{display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:28px; flex-wrap:wrap;}
+  .brand{display:flex; align-items:center; gap:12px;}
+  .brand svg{height:34px; width:auto;}
+  .brand h1{font-size:22px;}
+  .brand p{font-size:13px; color:var(--muted); font-style:italic;}
+  .btn{
+    display:inline-flex; align-items:center; gap:8px; background:linear-gradient(135deg,var(--terra-bright),var(--terra));
+    color:var(--cream); font-family:'Space Grotesk',sans-serif; font-weight:500; font-size:14px;
+    padding:11px 20px; border-radius:6px; border:none; cursor:pointer;
+  }
+  .btn:hover{filter:brightness(1.08);}
+  .btn.ghost{background:transparent; border:1px solid var(--line); color:var(--cream);}
+  .stats{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px;}
+  .stat{background:var(--navy-card); border:1px solid var(--line); border-radius:10px; padding:16px 18px;}
+  .stat .n{font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:700;}
+  .stat .l{font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-top:2px;}
+  .stat.completado .n{color:var(--green);}
+  .stat.progreso .n{color:var(--gold-bright);}
+  .stat.pendiente .n{color:var(--muted);}
+  .filters{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px;}
+  select, input[type=text], input[type=date], textarea{
+    background:var(--navy-card); border:1px solid var(--line); color:var(--cream);
+    padding:9px 12px; border-radius:6px; font-family:'Inter',sans-serif; font-size:13px;
+  }
+  select:focus, input:focus, textarea:focus{outline:1px solid var(--gold);}
+  .tablewrap{background:var(--navy-card); border:1px solid var(--line); border-radius:12px; overflow-x:auto;}
+  table{width:100%; border-collapse:collapse; min-width:1200px;}
+  th{
+    font-family:'Space Grotesk',sans-serif; font-size:11px; text-transform:uppercase; letter-spacing:0.5px;
+    color:var(--gold-bright); text-align:left; padding:14px 12px; border-bottom:1px solid var(--line); white-space:nowrap;
+  }
+  td{padding:12px; border-bottom:1px solid var(--line-soft); font-size:13px; vertical-align:top;}
+  tr:hover td{background:var(--navy-card-hi);}
+  .codigo{font-family:'Space Grotesk',sans-serif; font-weight:700; color:var(--gold-bright); white-space:nowrap;}
+  .desc{max-width:260px;}
+  .obs{max-width:220px; color:var(--muted); font-size:12px;}
+  .chip{display:inline-block; padding:3px 10px; border-radius:20px; font-size:11.5px; font-family:'Space Grotesk',sans-serif; white-space:nowrap;}
+  .chip.EL{background:rgba(55,138,221,0.18); color:#85B7EB;}
+  .chip.NH{background:rgba(216,90,48,0.18); color:#F0997B;}
+  .chip.AM{background:rgba(201,149,74,0.18); color:var(--gold-bright);}
+  .prio{font-size:11px; font-weight:700; font-family:'Space Grotesk',sans-serif;}
+  .prio.Alta{color:var(--terra-bright);}
+  .prio.Media{color:var(--gold-bright);}
+  .prio.Baja{color:var(--muted);}
+  .status-select{font-size:11.5px; padding:5px 8px; border-radius:20px; font-family:'Space Grotesk',sans-serif; border:none; cursor:pointer;}
+  .status-select.Completado{background:rgba(76,154,106,0.2); color:var(--green);}
+  .status-select.En-progreso{background:rgba(228,179,108,0.2); color:var(--gold-bright);}
+  .status-select.Pendiente{background:rgba(154,165,191,0.2); color:var(--muted);}
+  .days{font-family:'Space Grotesk',sans-serif; font-weight:700; text-align:center;}
+  .days.late{color:var(--terra-bright);}
+  .del{background:none; border:none; color:var(--muted); cursor:pointer; font-size:16px;}
+  .del:hover{color:var(--terra-bright);}
+  .modal-overlay{display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; z-index:50; padding:20px;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--navy-card); border:1px solid var(--line); border-radius:12px; padding:28px; width:100%; max-width:560px; max-height:88vh; overflow-y:auto;}
+  .modal h2{font-size:18px; margin-bottom:18px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:12px; color:var(--muted); margin-bottom:6px; font-family:'Space Grotesk',sans-serif;}
+  .field input, .field select, .field textarea{width:100%;}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .modal-actions{display:flex; justify-content:flex-end; gap:10px; margin-top:20px;}
+  #status-msg{font-size:12px; color:var(--muted); margin-top:10px; text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="brand">
+      <svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="78" fill="none" stroke="#FDFAF7" stroke-width="10"/><rect x="87" y="48" width="26" height="104" fill="#C9954A"/><rect x="48" y="87" width="104" height="26" fill="#B5451B"/><circle cx="100" cy="100" r="13" fill="#0B1526"/></svg>
+      <div><h1>Agenda de trabajo</h1><p>"Ene ideas, resultados medibles."</p></div>
+    </div>
+    <button class="btn" onclick="openModal()">+ Nueva tarea</button>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="filters">
+    <select id="f-area" onchange="render()"><option value="">Todas las áreas</option></select>
+    <select id="f-resp" onchange="render()"><option value="">Todos los responsables</option></select>
+    <select id="f-status" onchange="render()">
+      <option value="">Todos los status</option>
+      <option>Pendiente</option><option>En progreso</option><option>Completado</option>
+    </select>
+    <input type="text" id="f-search" placeholder="Buscar tarea..." oninput="render()">
+  </div>
+
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Código</th><th>Tarea</th><th>Responsables</th><th>Prioridad</th><th>Inicio</th>
+          <th>Entrega</th><th>Finalización</th><th>Área</th><th>Estado</th><th>Días gestión</th><th>Días demora</th><th>Notas</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+  <div id="status-msg">Cargando...</div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h2>Nueva tarea</h2>
+    <div class="field"><label>Tarea</label><textarea id="m-tarea" rows="2"></textarea></div>
+    <div class="row2">
+      <div class="field"><label>Responsables</label>
+        <select id="m-resp"><option value="Edwin Lee">Edwin Lee</option><option value="Noemy Hernández">Noemy Hernández</option><option value="Edwin Lee y Noemy Hernández">Ambos</option></select>
+      </div>
+      <div class="field"><label>Área</label>
+        <select id="m-area"><option>Marca e Identidad</option><option>Landing Page</option><option>Infraestructura</option><option>Redes Sociales</option><option>Comercial</option><option>CRM</option><option>Marketing</option></select>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Prioridad</label><select id="m-prioridad"><option>Alta</option><option>Media</option><option>Baja</option></select></div>
+      <div class="field"><label>Estado</label><select id="m-estado"><option>Pendiente</option><option>En progreso</option><option>Completado</option></select></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Fecha inicio</label><input type="date" id="m-inicio"></div>
+      <div class="field"><label>Fecha entrega (compromiso)</label><input type="date" id="m-entrega"></div>
+    </div>
+    <div class="field"><label>Fecha finalización (si ya terminó)</label><input type="date" id="m-finalizacion"></div>
+    <div class="field"><label>Notas</label><textarea id="m-notas" rows="2"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn" onclick="addActivity()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '/api/tareas';
+let activities = [];
+
+function respChip(r){
+  if(r==='Edwin Lee') return '<span class="chip EL">Edwin Lee</span>';
+  if(r==='Noemy Hernández') return '<span class="chip NH">Noemy Hernández</span>';
+  return '<span class="chip AM">Ambos</span>';
+}
+
+async function load(){
+  try{
+    const res = await fetch(API);
+    if(!res.ok) throw new Error('API respondió ' + res.status);
+    activities = await res.json();
+    document.getElementById('status-msg').textContent = '';
+  }catch(e){
+    document.getElementById('status-msg').textContent = 'No se pudo conectar con la base de datos: ' + e.message;
+  }
+  populateFilters();
+  render();
+}
+
+function diasEntre(a, b){
+  if(!a || !b) return null;
+  return Math.round((new Date(b) - new Date(a)) / 86400000);
+}
+
+function populateFilters(){
+  const fa = document.getElementById('f-area'); fa.innerHTML='<option value="">Todas las áreas</option>';
+  const fr = document.getElementById('f-resp'); fr.innerHTML='<option value="">Todos los responsables</option>';
+  [...new Set(activities.map(a=>a.area))].sort().forEach(a=>{ const o=document.createElement('option'); o.value=a; o.textContent=a; fa.appendChild(o); });
+  [...new Set(activities.map(a=>a.responsables))].forEach(r=>{ const o=document.createElement('option'); o.value=r; o.textContent=r==='Edwin Lee y Noemy Hernández'?'Ambos':r; fr.appendChild(o); });
+}
+
+function render(){
+  const fArea = document.getElementById('f-area').value;
+  const fResp = document.getElementById('f-resp').value;
+  const fStatus = document.getElementById('f-status').value;
+  const fSearch = document.getElementById('f-search').value.toLowerCase();
+
+  let filtered = activities.filter(a=>
+    (!fArea || a.area===fArea) && (!fResp || a.responsables===fResp) &&
+    (!fStatus || a.estado===fStatus) && (!fSearch || a.tarea.toLowerCase().includes(fSearch))
+  );
+
+  document.getElementById('tbody').innerHTML = filtered.map(a=>{
+    const codigo = 'ENE-' + String(a.id).padStart(4,'0');
+    const gestion = diasEntre(a.fecha_inicio, a.fecha_finalizacion);
+    const demora = diasEntre(a.fecha_entrega, a.fecha_finalizacion);
+    const gestionHtml = gestion===null ? '' : `<span class="days">${gestion}</span>`;
+    let demoraHtml = '';
+    if(demora!==null){
+      demoraHtml = `<span class="days ${demora>0?'late':''}">${demora>0?'+':''}${demora}</span>`;
+    }
+    const statusClass = a.estado.replace(' ','-');
+    return `<tr>
+      <td class="codigo">${codigo}</td>
+      <td class="desc">${a.tarea}</td>
+      <td>${respChip(a.responsables)}</td>
+      <td><span class="prio ${a.prioridad}">${a.prioridad}</span></td>
+      <td>${a.fecha_inicio ? a.fecha_inicio.substring(0,10) : ''}</td>
+      <td>${a.fecha_entrega ? a.fecha_entrega.substring(0,10) : ''}</td>
+      <td><input type="date" value="${a.fecha_finalizacion ? a.fecha_finalizacion.substring(0,10) : ''}" onchange="updateField(${a.id},'fecha_finalizacion',this.value)" style="width:140px"></td>
+      <td>${a.area}</td>
+      <td><select class="status-select ${statusClass}" onchange="updateField(${a.id},'estado',this.value)">
+        ${['Pendiente','En progreso','Completado'].map(s=>`<option ${s===a.estado?'selected':''}>${s}</option>`).join('')}
+      </select></td>
+      <td>${gestionHtml}</td>
+      <td>${demoraHtml}</td>
+      <td class="obs">${a.notas||''}</td>
+      <td><button class="del" onclick="deleteActivity(${a.id})" title="Eliminar">×</button></td>
+    </tr>`;
+  }).join('');
+
+  const total = activities.length;
+  const comp = activities.filter(a=>a.estado==='Completado').length;
+  const prog = activities.filter(a=>a.estado==='En progreso').length;
+  const pend = activities.filter(a=>a.estado==='Pendiente').length;
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="n">${total}</div><div class="l">Total</div></div>
+    <div class="stat completado"><div class="n">${comp}</div><div class="l">Completadas</div></div>
+    <div class="stat progreso"><div class="n">${prog}</div><div class="l">En progreso</div></div>
+    <div class="stat pendiente"><div class="n">${pend}</div><div class="l">Pendientes</div></div>
+  `;
+}
+
+async function updateField(id, field, value){
+  try{
+    const res = await fetch(`${API}?id=${id}`, {
+      method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({[field]: value})
+    });
+    if(!res.ok) throw new Error('Error ' + res.status);
+    const updated = await res.json();
+    activities = activities.map(a=>a.id===id?updated:a);
+    render();
+  }catch(e){ document.getElementById('status-msg').textContent = 'No se pudo guardar: ' + e.message; }
+}
+
+async function deleteActivity(id){
+  try{
+    const res = await fetch(`${API}?id=${id}`, { method:'DELETE' });
+    if(!res.ok) throw new Error('Error ' + res.status);
+    activities = activities.filter(a=>a.id!==id);
+    render();
+  }catch(e){ document.getElementById('status-msg').textContent = 'No se pudo eliminar: ' + e.message; }
+}
+
+function openModal(){ document.getElementById('modal-overlay').classList.add('open'); }
+function closeModal(){ document.getElementById('modal-overlay').classList.remove('open'); }
+
+async function addActivity(){
+  const tarea = document.getElementById('m-tarea').value.trim();
+  if(!tarea){ alert('La tarea es obligatoria.'); return; }
+  const body = {
+    tarea, responsables: document.getElementById('m-resp').value,
+    area: document.getElementById('m-area').value,
+    prioridad: document.getElementById('m-prioridad').value,
+    estado: document.getElementById('m-estado').value,
+    fecha_inicio: document.getElementById('m-inicio').value || null,
+    fecha_entrega: document.getElementById('m-entrega').value || null,
+    fecha_finalizacion: document.getElementById('m-finalizacion').value || null,
+    notas: document.getElementById('m-notas').value || null
+  };
+  try{
+    const res = await fetch(API, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    if(!res.ok) throw new Error('Error ' + res.status);
+    const created = await res.json();
+    activities.push(created);
+    closeModal();
+    ['m-tarea','m-inicio','m-entrega','m-finalizacion','m-notas'].forEach(id=>document.getElementById(id).value='');
+    populateFilters();
+    render();
+  }catch(e){ document.getElementById('status-msg').textContent = 'No se pudo guardar: ' + e.message; }
+}
+
+load();
+</script>
+</body>
+</html>
