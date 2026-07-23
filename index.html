@@ -102,6 +102,15 @@
       <option>Pendiente</option><option>En progreso</option><option>Completado</option>
     </select>
     <input type="text" id="f-search" placeholder="Buscar tarea..." oninput="render()">
+    <select id="f-sort" onchange="render()">
+      <option value="">Sin orden (más reciente agregado)</option>
+      <option value="fecha_inicio-asc">Inicio ↑ (más antigua primero)</option>
+      <option value="fecha_inicio-desc">Inicio ↓ (más nueva primero)</option>
+      <option value="fecha_entrega-asc">Entrega ↑ (más próxima primero)</option>
+      <option value="fecha_entrega-desc">Entrega ↓ (más lejana primero)</option>
+      <option value="fecha_finalizacion-asc">Finalización ↑</option>
+      <option value="fecha_finalizacion-desc">Finalización ↓</option>
+    </select>
   </div>
 
   <div class="tablewrap">
@@ -120,7 +129,8 @@
 
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal">
-    <h2>Nueva tarea</h2>
+    <h2 id="modal-title">Nueva tarea</h2>
+    <input type="hidden" id="m-id" value="">
     <div class="field"><label>Tarea</label><textarea id="m-tarea" rows="2"></textarea></div>
     <div class="row2">
       <div class="field"><label>Responsables</label>
@@ -142,7 +152,7 @@
     <div class="field"><label>Notas</label><textarea id="m-notas" rows="2"></textarea></div>
     <div class="modal-actions">
       <button class="btn ghost" onclick="closeModal()">Cancelar</button>
-      <button class="btn" onclick="addActivity()">Guardar</button>
+      <button class="btn" onclick="saveActivity()">Guardar</button>
     </div>
   </div>
 </div>
@@ -193,6 +203,19 @@ function render(){
     (!fStatus || a.estado===fStatus) && (!fSearch || a.tarea.toLowerCase().includes(fSearch))
   );
 
+  const sortValue = document.getElementById('f-sort').value;
+  if(sortValue){
+    const [campo, dir] = sortValue.split('-');
+    filtered = filtered.slice().sort((a,b)=>{
+      const va = a[campo], vb = b[campo];
+      if(!va && !vb) return 0;
+      if(!va) return 1;  // sin fecha va al final
+      if(!vb) return -1;
+      const da = new Date(va), db = new Date(vb);
+      return dir==='asc' ? da-db : db-da;
+    });
+  }
+
   document.getElementById('tbody').innerHTML = filtered.map(a=>{
     const codigo = 'ENE-' + String(a.id).padStart(4,'0');
     const gestion = diasEntre(a.fecha_inicio, a.fecha_finalizacion);
@@ -218,7 +241,10 @@ function render(){
       <td>${gestionHtml}</td>
       <td>${demoraHtml}</td>
       <td class="obs">${a.notas||''}</td>
-      <td><button class="del" onclick="deleteActivity(${a.id})" title="Eliminar">×</button></td>
+      <td style="white-space:nowrap;">
+        <button class="del" onclick="editActivity(${a.id})" title="Editar" style="margin-right:6px;">✎</button>
+        <button class="del" onclick="deleteActivity(${a.id})" title="Eliminar">×</button>
+      </td>
     </tr>`;
   }).join('');
 
@@ -255,12 +281,48 @@ async function deleteActivity(id){
   }catch(e){ document.getElementById('status-msg').textContent = 'No se pudo eliminar: ' + e.message; }
 }
 
-function openModal(){ document.getElementById('modal-overlay').classList.add('open'); }
+function limpiarModal(){
+  document.getElementById('m-id').value = '';
+  document.getElementById('m-tarea').value = '';
+  document.getElementById('m-resp').selectedIndex = 0;
+  document.getElementById('m-area').selectedIndex = 0;
+  document.getElementById('m-prioridad').selectedIndex = 0;
+  document.getElementById('m-estado').selectedIndex = 0;
+  document.getElementById('m-inicio').value = '';
+  document.getElementById('m-entrega').value = '';
+  document.getElementById('m-finalizacion').value = '';
+  document.getElementById('m-notas').value = '';
+}
+
+function openModal(){
+  limpiarModal();
+  document.getElementById('modal-title').textContent = 'Nueva tarea';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function editActivity(id){
+  const a = activities.find(x=>x.id===id);
+  if(!a) return;
+  document.getElementById('m-id').value = a.id;
+  document.getElementById('m-tarea').value = a.tarea || '';
+  document.getElementById('m-resp').value = a.responsables || '';
+  document.getElementById('m-area').value = a.area || '';
+  document.getElementById('m-prioridad').value = a.prioridad || '';
+  document.getElementById('m-estado').value = a.estado || '';
+  document.getElementById('m-inicio').value = a.fecha_inicio ? a.fecha_inicio.substring(0,10) : '';
+  document.getElementById('m-entrega').value = a.fecha_entrega ? a.fecha_entrega.substring(0,10) : '';
+  document.getElementById('m-finalizacion').value = a.fecha_finalizacion ? a.fecha_finalizacion.substring(0,10) : '';
+  document.getElementById('m-notas').value = a.notas || '';
+  document.getElementById('modal-title').textContent = 'Editar tarea';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
 function closeModal(){ document.getElementById('modal-overlay').classList.remove('open'); }
 
-async function addActivity(){
+async function saveActivity(){
   const tarea = document.getElementById('m-tarea').value.trim();
   if(!tarea){ alert('La tarea es obligatoria.'); return; }
+  const id = document.getElementById('m-id').value;
   const body = {
     tarea, responsables: document.getElementById('m-resp').value,
     area: document.getElementById('m-area').value,
@@ -272,12 +334,20 @@ async function addActivity(){
     notas: document.getElementById('m-notas').value || null
   };
   try{
-    const res = await fetch(API, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
-    if(!res.ok) throw new Error('Error ' + res.status);
-    const created = await res.json();
-    activities.push(created);
+    let res, saved;
+    if(id){
+      res = await fetch(`${API}?id=${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      if(!res.ok) throw new Error('Error ' + res.status);
+      saved = await res.json();
+      activities = activities.map(a=>a.id===saved.id?saved:a);
+    } else {
+      res = await fetch(API, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      if(!res.ok) throw new Error('Error ' + res.status);
+      saved = await res.json();
+      activities.push(saved);
+    }
     closeModal();
-    ['m-tarea','m-inicio','m-entrega','m-finalizacion','m-notas'].forEach(id=>document.getElementById(id).value='');
+    limpiarModal();
     populateFilters();
     render();
   }catch(e){ document.getElementById('status-msg').textContent = 'No se pudo guardar: ' + e.message; }
