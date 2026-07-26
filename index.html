@@ -70,6 +70,37 @@
   .days.late{color:var(--terra-bright);}
   .del{background:none; border:none; color:var(--muted); cursor:pointer; font-size:16px;}
   .del:hover{color:var(--terra-bright);}
+
+  /* ---------- Filtro multi-selección (Estado) ---------- */
+  .multiselect{position:relative; display:inline-block;}
+  .multiselect-btn{
+    background:var(--navy-card); border:1px solid var(--line); color:var(--cream);
+    padding:9px 12px; border-radius:6px; font-family:'Inter',sans-serif; font-size:13px; cursor:pointer;
+  }
+  .multiselect-btn:hover{border-color:var(--gold);}
+  .multiselect-panel{
+    display:none; position:absolute; top:calc(100% + 6px); left:0;
+    background:var(--navy-card-hi); border:1px solid var(--line); border-radius:8px;
+    padding:10px 14px; min-width:190px; z-index:40; box-shadow:0 8px 24px rgba(0,0,0,0.35);
+  }
+  .multiselect-panel.open{display:block;}
+  .multiselect-panel label{
+    display:flex; align-items:center; gap:8px; font-size:13px; padding:6px 0; cursor:pointer; white-space:nowrap;
+  }
+  .multiselect-panel input[type=checkbox]{accent-color:var(--gold); width:15px; height:15px;}
+  .multiselect-panel .limpiar{
+    margin-top:6px; padding-top:8px; border-top:1px solid var(--line);
+    font-size:12px; color:var(--muted); cursor:pointer; text-align:right;
+  }
+  .multiselect-panel .limpiar:hover{color:var(--gold-bright);}
+
+  /* ---------- Login ---------- */
+  #login-overlay .modal{max-width:380px; text-align:center;}
+  #login-overlay .brand-login{display:flex; flex-direction:column; align-items:center; gap:10px; margin-bottom:22px;}
+  #login-overlay .brand-login svg{height:52px; width:auto;}
+  #login-overlay .brand-login p{font-size:13px; color:var(--gold-bright); font-style:italic;}
+  #login-error{color:var(--terra-bright); font-size:12.5px; margin-top:8px; min-height:16px;}
+  #app-root{display:none;}
   .modal-overlay{display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; z-index:50; padding:20px;}
   .modal-overlay.open{display:flex;}
   .modal{background:var(--navy-card); border:1px solid var(--line); border-radius:12px; padding:28px; width:100%; max-width:560px; max-height:88vh; overflow-y:auto;}
@@ -83,13 +114,34 @@
 </style>
 </head>
 <body>
+
+<div class="modal-overlay open" id="login-overlay">
+  <div class="modal">
+    <div class="brand-login">
+      <svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="78" fill="none" stroke="#FDFAF7" stroke-width="10"/><rect x="87" y="48" width="26" height="104" fill="#C9954A"/><rect x="48" y="87" width="104" height="26" fill="#B5451B"/><circle cx="100" cy="100" r="13" fill="#0B1526"/></svg>
+      <h2 style="margin:0;">Agenda de trabajo</h2>
+      <p>"Ene ideas, resultados medibles."</p>
+    </div>
+    <div class="field" style="text-align:left;">
+      <label>Clave de acceso del equipo</label>
+      <input type="password" id="login-password" placeholder="••••••••" onkeydown="if(event.key==='Enter') hacerLogin();">
+    </div>
+    <button class="btn" style="width:100%; justify-content:center;" onclick="hacerLogin()">Entrar</button>
+    <div id="login-error"></div>
+  </div>
+</div>
+
+<div id="app-root">
 <div class="wrap">
   <div class="head">
     <div class="brand">
       <svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="78" fill="none" stroke="#FDFAF7" stroke-width="10"/><rect x="87" y="48" width="26" height="104" fill="#C9954A"/><rect x="48" y="87" width="104" height="26" fill="#B5451B"/><circle cx="100" cy="100" r="13" fill="#0B1526"/></svg>
       <div><h1>Agenda de trabajo</h1><p>"Ene ideas, resultados medibles."</p></div>
     </div>
-    <button class="btn" onclick="openModal()">+ Nueva tarea</button>
+    <div style="display:flex; gap:10px;">
+      <button class="btn ghost" onclick="cerrarSesion()">Cerrar sesión</button>
+      <button class="btn" onclick="openModal()">+ Nueva tarea</button>
+    </div>
   </div>
 
   <div class="stats" id="stats"></div>
@@ -97,10 +149,15 @@
   <div class="filters">
     <select id="f-area" onchange="render()"><option value="">Todas las áreas</option></select>
     <select id="f-resp" onchange="render()"><option value="">Todos los responsables</option></select>
-    <select id="f-status" onchange="render()">
-      <option value="">Todos los status</option>
-      <option>Pendiente</option><option>En progreso</option><option>Completado</option>
-    </select>
+    <div class="multiselect" id="ms-estado">
+      <button type="button" class="multiselect-btn" onclick="toggleMultiselect(event)">Estado: Todos ▾</button>
+      <div class="multiselect-panel">
+        <label><input type="checkbox" value="Pendiente" onchange="onEstadoCheckbox()"> Pendiente</label>
+        <label><input type="checkbox" value="En progreso" onchange="onEstadoCheckbox()"> En progreso</label>
+        <label><input type="checkbox" value="Completado" onchange="onEstadoCheckbox()"> Completado</label>
+        <div class="limpiar" onclick="limpiarEstados()">Limpiar selección</div>
+      </div>
+    </div>
     <input type="text" id="f-search" placeholder="Buscar tarea..." oninput="render()">
     <select id="f-sort" onchange="render()">
       <option value="">Sin orden (más reciente agregado)</option>
@@ -125,6 +182,7 @@
     </table>
   </div>
   <div id="status-msg">Cargando...</div>
+</div>
 </div>
 
 <div class="modal-overlay" id="modal-overlay">
@@ -160,6 +218,29 @@
 <script>
 const API = '/api/tareas';
 let activities = [];
+let estadosSeleccionados = [];
+
+function toggleMultiselect(ev){
+  ev.stopPropagation();
+  document.querySelector('#ms-estado .multiselect-panel').classList.toggle('open');
+}
+document.addEventListener('click', function(ev){
+  const panel = document.querySelector('#ms-estado .multiselect-panel');
+  if(panel && panel.classList.contains('open') && !document.getElementById('ms-estado').contains(ev.target)){
+    panel.classList.remove('open');
+  }
+});
+function onEstadoCheckbox(){
+  const marcados = [...document.querySelectorAll('#ms-estado input[type=checkbox]:checked')].map(c=>c.value);
+  estadosSeleccionados = marcados;
+  const btn = document.querySelector('#ms-estado .multiselect-btn');
+  btn.textContent = marcados.length ? `Estado: ${marcados.length} seleccionado(s) ▾` : 'Estado: Todos ▾';
+  render();
+}
+function limpiarEstados(){
+  document.querySelectorAll('#ms-estado input[type=checkbox]').forEach(c=>c.checked=false);
+  onEstadoCheckbox();
+}
 
 function respChip(r){
   if(r==='Edwin Lee') return '<span class="chip EL">Edwin Lee</span>';
@@ -195,12 +276,12 @@ function populateFilters(){
 function render(){
   const fArea = document.getElementById('f-area').value;
   const fResp = document.getElementById('f-resp').value;
-  const fStatus = document.getElementById('f-status').value;
   const fSearch = document.getElementById('f-search').value.toLowerCase();
 
   let filtered = activities.filter(a=>
     (!fArea || a.area===fArea) && (!fResp || a.responsables===fResp) &&
-    (!fStatus || a.estado===fStatus) && (!fSearch || a.tarea.toLowerCase().includes(fSearch))
+    (!estadosSeleccionados.length || estadosSeleccionados.includes(a.estado)) &&
+    (!fSearch || a.tarea.toLowerCase().includes(fSearch))
   );
 
   const sortValue = document.getElementById('f-sort').value;
@@ -353,7 +434,38 @@ async function saveActivity(){
   }catch(e){ document.getElementById('status-msg').textContent = 'No se pudo guardar: ' + e.message; }
 }
 
-load();
+async function hacerLogin(){
+  const password = document.getElementById('login-password').value;
+  const errorBox = document.getElementById('login-error');
+  errorBox.textContent = '';
+  try{
+    const res = await fetch('/api/login', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({password})
+    });
+    if(!res.ok){ errorBox.textContent = 'Clave incorrecta.'; return; }
+    document.getElementById('login-overlay').classList.remove('open');
+    document.getElementById('app-root').style.display = 'block';
+    load();
+  }catch(e){ errorBox.textContent = 'No se pudo conectar: ' + e.message; }
+}
+
+async function cerrarSesion(){
+  try{ await fetch('/api/logout', { method:'POST' }); }catch(e){ /* no bloquea el logout visual */ }
+  location.reload();
+}
+
+async function verificarSesion(){
+  try{
+    const res = await fetch('/api/session');
+    if(res.ok){
+      document.getElementById('login-overlay').classList.remove('open');
+      document.getElementById('app-root').style.display = 'block';
+      load();
+    }
+  }catch(e){ /* sin sesión válida — se queda en la pantalla de login */ }
+}
+
+verificarSesion();
 </script>
 </body>
 </html>
